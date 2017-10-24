@@ -30,8 +30,16 @@ int getADCPort();
 
 int ADCPinNumber = 0;
 
+int inputPotA = 0; 
+int inputPotB = 0; 
+int outputPot1 = 0; 
+int outputPot2 = 0; 
+
+int joint1Diff = 0; 
+int joint2Diff = 0; 
+
 int main(void){		
-	//clockdivide of zero! 
+	//clockdivide of zero!
 	teensy_clockdivide(0);
 	m_usb_init();
 	//set the DDRC for the first motor 
@@ -39,8 +47,7 @@ int main(void){
 	set(DDRD,motor2APin);
 	set(DDRD,speedPin1);
 	//set the direction of the motor
-	//clear(PORTD,motor1APin);
-	//set(PORTD,motor2APin);
+
 	//second motor 
 	set(DDRF,motor3APin);
 	set(DDRF,motor4APin);
@@ -73,67 +80,113 @@ int main(void){
 	set(ADCSRA,ADPS1);
 	set(ADCSRA,ADPS0);	
 
-	//set the ADC port for Pot1 Input  
+	setADCPort(inputPot1Letter,inputPot1Number);
+	setADCPort(inputPot2Letter,inputPot2Number);
+	setADCPort(outputPot1Letter,outputPot1Number);
 	setADCPort(outputPot2Letter,outputPot2Number);
-
-	set(ADCSRA,ADEN);
-	set(ADCSRA,ADSC);
 
 	int scale = 256;
 	float frequency = 1000;
 	ICR3= 16000000.0/scale/frequency;
 
 	for(;;){
+		//set the ADC port for Pot1 Input  
+		//setADCPort(inputPot1Letter,inputPot1Number);
+		setClearSingleEndedChannelSelection("1010");
+		set(ADCSRA,ADEN);
+		set(ADCSRA,ADSC);
+		inputPotA = ADC;//getADCPort();
 		//display the results for Pot1
-		int inputPot1 = getADCPort();
-		m_usb_tx_string("Input Pot 1: ");
-		m_usb_tx_uint(inputPot1);
-		m_usb_tx_string("\n");
-
-/*		//clear ADC 
-    	clear(ADCSRA,ADEN);
-		//set the ADC port for Pot2 Input  
-		setADCPort(inputPot2Letter,inputPot2Number);
-		//restart the ADC 
-		set(ADCSRA,ADEN);
-		set(ADCSRA,ADSC);
-		//display the results 
-		int inputPot2 = getADCPort();
-		m_usb_tx_string("Input Pot 2: ");
-		m_usb_tx_uint(inputPot2);
-		m_usb_tx_string("\n");
-
-		//clear ADC 
-    	clear(ADCSRA,ADEN);
-		//set the ADC port for Pot1 Output  
-		setADCPort(outputPot1Letter,outputPot1Number);
-		//restart the ADC 
-		set(ADCSRA,ADEN);
-		set(ADCSRA,ADSC);
-		//display the results 
-		int outputPot1 = getADCPort();
-		m_usb_tx_string("Output Pot 1: ");
-		m_usb_tx_uint(outputPot1);
-		m_usb_tx_string("\n");
-
-		//clear ADC 
-    	clear(ADCSRA,ADEN);
-		//set the ADC port for Pot1 Output  
-		setADCPort(outputPot2Letter,outputPot2Number);
-		//restart the ADC 
-		set(ADCSRA,ADEN);
-		set(ADCSRA,ADSC);
-		//display the results 
-		int outputPot2 = getADCPort();
-		m_usb_tx_string("Output Pot 2: ");
-		m_usb_tx_uint(outputPot2);
+		teensy_wait(200);
+/*		m_usb_tx_string("Input Pot 1: ");
+		m_usb_tx_int(inputPotA);
 		m_usb_tx_string("\n");*/
 
-		int d;
-		float duty_cycle = 100*(ADC/1024);
-		OCR3A = (duty_cycle/100.0)*ICR3;
+		//clear ADC 
+    	clear(ADCSRA,ADEN);
+		//set the ADC port for Pot2 Input  
+		setClearSingleEndedChannelSelection("1001");
+		//setADCPort(inputPot2Letter,inputPot2Number);
+		//restart the ADC 
+		set(ADCSRA,ADEN);
+		set(ADCSRA,ADSC);
+		//get the diff betw new val and old val
+		inputPotB = ADC;//getADCPort();
+		//display the results 
+		teensy_wait(200);
+/*		m_usb_tx_string("Input Pot 2: ");
+		m_usb_tx_int(inputPotB);
+		m_usb_tx_string("\n");*/
 
+		float duty_cycle = 0; 
+
+		//clear ADC 
+    	clear(ADCSRA,ADEN);
+		//set the ADC port for Pot1 Output  
+		//setADCPort(outputPot1Letter,outputPot1Number);
+		setClearSingleEndedChannelSelection("1100");
+		//restart the ADC 
+		set(ADCSRA,ADEN);
+		set(ADCSRA,ADSC);
+		//display the results 
+		outputPot1 = ADC;//getADCPort();
+		teensy_wait(200);
+/*		m_usb_tx_string("Output Pot 1: ");
+		m_usb_tx_uint(output1Diff);
+		m_usb_tx_string("\n");*/
+
+
+		//clear ADC 
+    	clear(ADCSRA,ADEN);
+		//set the ADC port for Pot1 Output  
+		//setADCPort(outputPot2Letter,outputPot2Number);
+		setClearSingleEndedChannelSelection("0000");
+		//restart the ADC 
+		set(ADCSRA,ADEN);
+		set(ADCSRA,ADSC);
+		//display the results 
+		outputPot2 = ADC; //getADCPort();
+		teensy_wait(200);
+/*		m_usb_tx_string("Output Pot 2: ");
+		m_usb_tx_uint(output2Diff);
+		m_usb_tx_string("\n");*/
+
+		joint1Diff = inputPotA - outputPot1;
+		joint2Diff = inputPotB - outputPot2;
+
+		m_usb_tx_string("joint1Diff: ");
+		m_usb_tx_int(joint1Diff);
+		m_usb_tx_string("\n");
+
+		m_usb_tx_string("joint2Diff: ");
+		m_usb_tx_int(joint2Diff);
+		m_usb_tx_string("\n");
+
+		// if (joint1Diff > 50){
+		// 	clear(PORTD,motor1APin);
+		// 	set(PORTD,motor2APin);
+		// 	duty_cycle = 100*(joint1Diff/1024);
+		// 	OCR3A = (duty_cycle/100.0)*ICR3;
+		// } else if (joint1Diff < 50){
+		// 	set(PORTD,motor1APin);
+		// 	clear(PORTD,motor2APin);
+		// 	duty_cycle = 100*(joint1Diff/1024);
+		// 	OCR3A = (duty_cycle/100.0)*ICR3;
+		// }
+
+		// if (joint2Diff > 50){
+		// 	clear(PORTF,motor3APin);
+		// 	set(PORTF,motor4APin);
+		// 	duty_cycle = 100*(joint2Diff/1024);
+		// 	OCR3A = (duty_cycle/100.0)*ICR3;
+		// } else if (joint2Diff < 50){
+		// 	set(PORTF,motor3APin);
+		// 	clear(PORTF,motor4APin);
+		// 	duty_cycle = 100*(joint2Diff/1024);
+		// 	OCR3A = (duty_cycle/100.0)*ICR3;
+		// }
 	}
+
 	return 0;
 }
 
