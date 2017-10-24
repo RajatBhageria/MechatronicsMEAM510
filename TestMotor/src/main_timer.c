@@ -11,6 +11,14 @@
 #define motor2APin 7
 #define speedPin 6
 
+#define motor1APin 1 /* d*/
+#define motor2APin 2 /* d*/
+#define speedPin1 6 /* d*/
+
+#define motor3APin 6 /* f*/
+#define motor4APin 7 /* f*/
+#define speedPin2 6 /* f*/
+
 #define check(reg,bit)		(bool)(reg & (1<<(bit)))
 
 int main(void){
@@ -18,13 +26,28 @@ int main(void){
 	teensy_clockdivide(0); //set the clock speed
 
 	teensy_led(ON);
-	set(DDRF,motor1APin);
-	set(DDRF,motor2APin);
-	set(DDRC,speedPin);
+	//set(DDRF,motor1APin);
+	//set(DDRF,motor2APin);
+	//set(DDRC,speedPin);
+
+	set(DDRD,motor1APin);
+	set(DDRD,motor2APin);
+	set(DDRC,speedPin1);
+	//set the direction of the motor
+
+	//second motor 
+	set(DDRF,motor3APin);
+	set(DDRF,motor4APin);
+	set(DDRC,speedPin2);	
 
 	//set the direction of the motor
-	set(PORTF,motor1APin);
-    clear(PORTF,motor2APin);
+//	set(PORTF,motor1APin);
+//    clear(PORTF,motor2APin);
+
+	set(PORTD,motor1APin);
+	clear(PORTD,motor2APin);
+	set(PORTF,motor3APin);
+	clear(PORTF,motor4APin);
 
 	//clock source and prescalers 256 prescaler 
 	set(TCCR3B, CS32);
