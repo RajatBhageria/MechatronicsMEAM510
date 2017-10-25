@@ -30,18 +30,9 @@ int getADCPort();
 
 int ADCPinNumber = 0;
 
-int inputPotA = 0; 
-int inputPotB = 0; 
-int outputPot1 = 0; 
-int outputPot2 = 0; 
-
-int joint1Diff = 0; 
-int joint2Diff = 0; 
-
-int joint1SecondDiff = 0; 
-int joint2SecondDiff = 0; 
 
 int main(void){		
+
 	//clockdivide of zero!
 	teensy_clockdivide(0);
 	m_usb_init();
@@ -89,7 +80,21 @@ int main(void){
 	float frequency = 1000;
 	ICR3= 16000000.0/scale/frequency;
 
+	int initialDiff1 = 0; 
+	int initialDiff2 = 0; 
+	int counter = 0; 
+
 	for(;;){
+		int inputPotA = 0; 
+		int inputPotB = 0; 
+		int outputPot1 = 0; 
+		int outputPot2 = 0; 
+
+		int joint1Diff = 0; 
+		int joint2Diff = 0; 
+
+		int joint1SecondDiff = 0; 
+		int joint2SecondDiff = 0; 
 		//set the ADC port for Pot1 Input  
 		//setADCPort(inputPot1Letter,inputPot1Number);
 		setClearSingleEndedChannelSelection("1010");
@@ -112,8 +117,6 @@ int main(void){
 		inputPotB = ADC;
 		//display the results 
 		teensy_wait(200);
-
-		float duty_cycle = 0; 
 
 		//clear ADC 
     	clear(ADCSRA,ADEN);
@@ -147,11 +150,21 @@ int main(void){
 			outputPot2 -> inputPotA 
 		*/ 
 
-		joint1SecondDiff = outputPot2 - inputPotB - joint1Diff; 
-		joint2SecondDiff = inputPotA - outputPot1 - joint2Diff; 
+		//joint1SecondDiff = outputPot2 - inputPotB - joint1Diff; 
+		//joint2SecondDiff = inputPotA - outputPot1 - joint2Diff; 
 
 		joint1Diff = outputPot2 - inputPotB; 
 		joint2Diff = inputPotA - outputPot1; 
+	
+		if (counter==3){
+			initialDiff1 = joint1Diff; 
+			initialDiff2 = joint2Diff; 
+		}
+
+		joint1Diff = joint1Diff - initialDiff1; 
+		joint2Diff = joint2Diff - initialDiff2; 
+		counter = counter+1; 
+
 /*
 		m_usb_tx_string("inputPotA: ");
 		m_usb_tx_int(inputPotB);
@@ -170,45 +183,68 @@ int main(void){
 		m_usb_tx_string("\n");
 */
 		m_usb_tx_string("joint1Diff: ");
-		m_usb_tx_int(joint1SecondDiff);
+		m_usb_tx_int(joint1Diff);
 		m_usb_tx_string("\n");
 
 		m_usb_tx_string("joint2Diff: ");
-		m_usb_tx_int(joint2SecondDiff);
+		m_usb_tx_int(joint2Diff);
 		m_usb_tx_string("\n");
 
-		int epsilon = 20; 
+		int epsilon = 40; 
 
 		clear(PORTD,motor1APin);
 		clear(PORTD,motor2APin);
 		clear(PORTF,motor3APin);
 		clear(PORTF,motor4APin);
 
-		if (joint1SecondDiff > epsilon){
-			m_usb_tx_string("1 One direct: ");
+		float k_p = 2.3; //makeproportional P controller 
+		float k_p_joint2 = .9;
+
+		if (joint1Diff > epsilon){
 			set(PORTD,motor1APin);
 			clear(PORTD,motor2APin);
-			duty_cycle = 100*(joint1SecondDiff/1024);
-			OCR3A = (50/100.0)*ICR3;
-		} else if (-1*joint1SecondDiff > epsilon){
-			m_usb_tx_string("1 Other direct: ");
+			float duty_cycle = 100.0*(k_p*joint1Diff/1024.0);
+			if (duty_cycle>100.0){
+				duty_cycle = 100.0;
+			}
+			m_usb_tx_string("Duty Cycle: ");
+			m_usb_tx_int(duty_cycle);
+			m_usb_tx_string("\n");				
+			OCR3A = (duty_cycle/100.0)*ICR3;
+		} else if (-1*joint1Diff > epsilon){
 			clear(PORTD,motor1APin);
 			set(PORTD,motor2APin);
-			duty_cycle = 100*(joint1SecondDiff/1024);
-			OCR3A = (50/100.0)*ICR3;
+			float duty_cycle = 100.0*(-1*k_p*joint1Diff/1024.0);
+			if (duty_cycle>100.0){
+				duty_cycle = 100.0;
+			}
+			m_usb_tx_string("Duty Cycle: ");
+			m_usb_tx_int(duty_cycle);
+			m_usb_tx_string("\n");					
+			OCR3A = (duty_cycle/100.0)*ICR3;
 		} 
-		if (joint2SecondDiff > epsilon){
-			m_usb_tx_string("2 One direct: ");
-			(PORTF,motor3APin);
+		if (joint2Diff > epsilon){
+			set(PORTF,motor3APin);
 			clear(PORTF,motor4APin);
-			duty_cycle = 100*(joint2SecondDiff/1024);
-			OCR3A = (50/100.0)*ICR3;
-		}  else if (-1*joint2SecondDiff > epsilon){
-			m_usb_tx_string("2 Other direct: ");
+			float duty_cycle = 100.0*(k_p_joint2*joint2Diff/1024.0);
+			if (duty_cycle>100.0){
+				duty_cycle = 100.0;
+			}
+			m_usb_tx_string("Duty Cycle: ");
+			m_usb_tx_int(duty_cycle);
+			m_usb_tx_string("\n");		
+			OCR3A = (duty_cycle/100.0)*ICR3;
+		}  else if (-1*joint2Diff > epsilon){
 			clear(PORTF,motor3APin);
 			set(PORTF,motor4APin);
-			duty_cycle = 100*(joint2SecondDiff/1024);
-			OCR3A = (50/100.0)*ICR3;
+			float duty_cycle = 100.0*(-1*k_p_joint2*joint2Diff/1024.0);
+			if (duty_cycle>100.0){
+				duty_cycle = 100.0;
+			}
+			m_usb_tx_string("Duty Cycle: ");
+			m_usb_tx_int(duty_cycle);
+			m_usb_tx_string("\n");		
+			OCR3A = (duty_cycle/100.0)*ICR3;
 		} 
 	}
 
