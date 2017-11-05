@@ -44,10 +44,10 @@ int main(void){
 //	set(PORTF,motor1APin);
 //    clear(PORTF,motor2APin);
 
-	set(PORTD,motor1APin);
-	clear(PORTD,motor2APin);
-	set(PORTF,motor3APin);
-	clear(PORTF,motor4APin);
+	//set(PORTD,motor1APin);
+	//clear(PORTD,motor2APin);
+	clear(PORTF,motor3APin);
+	set(PORTF,motor4APin);
 
 	//clock source and prescalers 256 prescaler 
 	set(TCCR3B, CS32);
@@ -68,7 +68,7 @@ int main(void){
 	float frequency = 1000;
 	ICR3= 16000000.0/scale/frequency;
 
-	OCR3A = (50/100.0)*ICR3; 
+	OCR3A = (100.00/100.0)*ICR3; 
     /*for(;;){	
 	    int d;  
 	 	for (d =0; d < 100; d++){

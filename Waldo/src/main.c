@@ -102,7 +102,7 @@ int main(void){
 		set(ADCSRA,ADSC);
 		inputPotA = ADC;
 		//display the results for Pot1
-		teensy_wait(200);
+		teensy_wait(10);
 
 
 		//clear ADC 
@@ -116,7 +116,7 @@ int main(void){
 		//get the diff betw new val and old val
 		inputPotB = ADC;
 		//display the results 
-		teensy_wait(200);
+		teensy_wait(10);
 
 		//clear ADC 
     	clear(ADCSRA,ADEN);
@@ -128,7 +128,7 @@ int main(void){
 		set(ADCSRA,ADSC);
 		//display the results 
 		outputPot1 = ADC;
-		teensy_wait(200);
+		teensy_wait(10);
 
 
 		//clear ADC 
@@ -141,7 +141,7 @@ int main(void){
 		set(ADCSRA,ADSC);
 		//display the results 
 		outputPot2 = ADC; 
-		teensy_wait(200);
+		teensy_wait(10);
 
 		/* Mappings 
 			inputPotA -> inputPotB
@@ -164,8 +164,8 @@ int main(void){
 		joint1Diff = joint1Diff - initialDiff1; 
 		joint2Diff = joint2Diff - initialDiff2; 
 		counter = counter+1; 
-
 /*
+
 		m_usb_tx_string("inputPotA: ");
 		m_usb_tx_int(inputPotB);
 		m_usb_tx_string("\n");
@@ -197,8 +197,8 @@ int main(void){
 		clear(PORTF,motor3APin);
 		clear(PORTF,motor4APin);
 
-		float k_p = 2.3; //makeproportional P controller 
-		float k_p_joint2 = .9;
+		float k_p = 2.7; //makeproportional P controller 
+		float k_p_joint2 = 2;
 
 		if (joint1Diff > epsilon){
 			set(PORTD,motor1APin);
@@ -246,6 +246,7 @@ int main(void){
 			m_usb_tx_string("\n");		
 			OCR3A = (duty_cycle/100.0)*ICR3;
 		} 
+		
 	}
 
 	return 0;
