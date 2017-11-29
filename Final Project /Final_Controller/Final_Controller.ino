@@ -68,14 +68,6 @@ void loop() {
     
     //read the ADC value 
     int ADC1 = analogRead(A0);
-    
-    //send the ADC value associated with the first motor to the car. 
-    //note that we're sending one ADC value at a time during each iteration of the loop.
-    //the second parameter tells us that this ADC is associated with the first motor. 
-    udpSend(String(ADC1), 1);
-    
-    //reverse firstMotor so next iteration of the loop, we get the value of the other ADC 
-    firstMotor = !firstMotor;
 
   } else{ //we want to get power from the second ADC 
     
@@ -87,16 +79,25 @@ void loop() {
     
     //get the reading from second ADC 
     int ADC2 = analogRead(A0); 
-     
+  }
+
+  //actually send the information to the other ESP 
+  if (firstMotor){
+    //send the ADC value associated with the first motor to the car. 
+    //note that we're sending one ADC value at a time during each iteration of the loop.
+    //the second parameter tells us that this ADC is associated with the first motor. 
+    udpSend(String(ADC1), 1);
+  }else{
     //send the ADC values associated with the second motor 
     //note that we're sending one ADC value at a time during each iteration of the loop.
     //the second parameter tells us that this ADC is associated with the first motor. 
-    
     udpSend(String(ADC2), 2);
-    
-    //reverse firstMotor so next iteration of the loop, we get the value of the other ADC 
-    firstMotor = !firstMotor;
   }
+  
+  //reverse firstMotor so next iteration of the loop, we get the value of the other ADC 
+  firstMotor = !firstMotor;
+  
+  
 }
 
 
