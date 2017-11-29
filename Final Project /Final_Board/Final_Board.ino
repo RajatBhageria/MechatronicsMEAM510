@@ -21,6 +21,11 @@ int motor2ADC;
 boolean receivedGo = false; 
 unsigned int udpGOPort = 2390; 
 
+//initialize the health, cooling period
+int health = 100; 
+int coolingPeriod = 10; 
+int attackDamage = 10; 
+
 //runs once intially to set up wifi and pinModes
 void setup() {
   // put your setup code here, to run once:
@@ -51,28 +56,29 @@ void setup() {
   //Motor 1 
   //Set up the pinmode for motor left direction pin 
   pinMode(D0, OUTPUT); 
-  //Set up the pinmode for motor right direction pin 
-  pinMode(D1, OUTPUT); 
   //set up pinmode for speed of first  motor 
-  pinMode(D6, OUTPUT); 
+  pinMode(D3, OUTPUT); 
   //set the direction of the first motor 
-  digitalWrite(D0, HIGH); 
-  digitalWrite(D1, LOW); 
+  digitalWrite(D0, LOW); 
 
   //Motor 2
-  //Set up the pinmode for motor left direction pin 
-  pinMode(D3, OUTPUT); 
-  //Set up the pinmode for motor right direction pin 
-  pinMode(D4, OUTPUT); 
-  //set up pinmode for speed of second  motor 
+  //Set up the pinmode for motor  direction pin 
   pinMode(D7, OUTPUT); 
+  //set up pinmode for speed of second  motor 
+  pinMode(D4, OUTPUT); 
   //set the direction for the second motor 
-  digitalWrite(D3, HIGH); 
-  digitalWrite(D4, LOW); 
+  digitalWrite(D7, LOW); 
+
+  //initialize the pinMode for the servo 
+  pinMode(D1, OUTPUT); 
+
+  //initialize the pinMode for the team color light 
+  pinMode(D2, OUTPUT); 
 }
 
 //runs over and over 
 void loop() {
+  
   int ADC1; //set to ADC1 value from the UDP
   int ADC2; //set to ADC2 value from the UDP 
 
@@ -94,10 +100,10 @@ void loop() {
   //in the case that the ADC value is four chars, there will be no 'A' in our ADCReads string 
   if (indexA == -1){
     //We then take the substring and convert it to an int. 
-    ADCvalue = ADCReads.substring(0,4).toInt();
+    ADCvalue = ADCReads.substring(0,3).toInt();
     
     //the motorValue ('x' or 'y' is always the fourth char in ADCReads from the controller. 
-    motorValue = (char) ADCReads[4];
+    motorValue = (char) ADCReads[3];
     
   } else{
     //in the case that the ADC value is less than four chars, there will be an 'A' in the ADCReads
@@ -105,7 +111,7 @@ void loop() {
     ADCvalue = ADCReads.substring(0,indexA).toInt();
     
     //the motorValue ('x' or 'y' is always the fourth char in ADCReads from the controller. 
-    motorValue = (char) ADCReads[4];
+    motorValue = (char) ADCReads[3];
   }
 
   //get the values for first and second motor 
@@ -118,13 +124,14 @@ void loop() {
     motor2ADC = ADCvalue; 
   }
 
-  //get the value from port 
-  udp.begin(udpGOPort); 
-  //set receivedGo to true if udpRead = "GO"! 
-  receivedGo = (udpRead().equals("GO!")); 
+  //get whether melee is being implemented 
+  boolean melee = ADCReads[4];
+  
+  //get the team color 
+  char teamColor = ADCReads[5];
 
-  //only make the motor go if receivedGO! 
-  if (receivedGo){
+  //only go if the health is greater than zero. 
+  if (health > 0){
     //create a multiplier since our pots on the controller only go from 0 to 400. 
     //since we want the full resolution of 0 to 1000, we multiply all the ADC values by 2.3
     //before actuating. 
@@ -135,7 +142,7 @@ void loop() {
       //first motor 
       int toWriteFirst = (int) motor1ADC*multiplier; 
       //write the scaled adc value to the first motor. 
-      analogWrite(D6,toWriteFirst);
+      analogWrite(D3,toWriteFirst);
       //print to test. 
       Serial.print("first: ");
       Serial.println(toWriteFirst);
@@ -143,47 +150,36 @@ void loop() {
       //second motor 
       int toWriteSecond = (int) motor2ADC*multiplier; 
       //write the scaled adc value to the second motor. 
-      analogWrite(D7,toWriteSecond);
+      analogWrite(D4,toWriteSecond);
       //print to test. 
       Serial.print("second: ");
       Serial.println(toWriteSecond); 
     }
-  }
 
-  //reset the port to controller not 2390 where GO command comes from
-  udp.begin(udplocalPort); 
+    //display the light of the team color
+    //may have to switch high and low depending on which color gets inverter 
+    if (teamColor == 'r'){
+      digitalWrite(D5, LOW); 
+    } else if (teamColor == 'b'){
+      digitalWrite(D5, HIGH); 
+    }
+
+    //do the meleeing and display that you are meleeing 
+    if (melee){
+      //make the melee arm go 
+      digitalWrite(D1, LOW);
+    }
+    
+      
+    //display the health 
+
+    //display whether healing 
+
+    //
+    
+  }
 }
 
-/**
- * Send the String toSend to the ipSendTo
- */
-void udpSend(String ADC, int motorValue){
-
-  //send the ADC
-  for (int i = 0; i < ADC.length(); i++){
-    udpBuffer[i] = (char) ADC[i];
-  }
-
-  //zeros to add 
-  int zeros = UPD_PACKET_SIZE - (ADC).length()-1; 
-  for (int i = ADC.length(); i < (zeros+ADC.length()); i++){
-    udpBuffer[i] = (char) 'A'; 
-  }
-  
-  //send which motor it is  
-  if (motorValue == 1){
-      udpBuffer[UPD_PACKET_SIZE-1] = 'x'; 
-  } else if (motorValue ==2){
-    udpBuffer[UPD_PACKET_SIZE-1] = 'y'; 
-  }
-  
-  udp.beginPacket(ipSendto,udpRemotePort); 
-  udp.write(udpBuffer, sizeof(udpBuffer)); 
-  udp.endPacket(); 
-
-  Serial.print("Sending!: ");
-  Serial.println(udpBuffer); 
-}
 
 /** 
  *  Read the UDP 
