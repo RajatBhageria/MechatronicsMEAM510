@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include <Servo.h>
 
 //set up the wifi
 const char* ssid = "modlab1"; //Modlab1
@@ -23,8 +24,15 @@ unsigned int udpGOPort = 2390;
 
 //initialize the health, cooling period
 int health = 100; 
-int coolingPeriod = 10; 
 int attackDamage = 10; 
+
+//implement cooldown period
+int startTime = 0; 
+int endTime = 0; 
+int coolingPeriod = 10; 
+
+//initialize the servo for melee 
+Servo myservo;
 
 //runs once intially to set up wifi and pinModes
 void setup() {
@@ -70,10 +78,13 @@ void setup() {
   digitalWrite(D7, LOW); 
 
   //initialize the pinMode for the servo 
-  pinMode(D1, OUTPUT); 
+  myservo.attach(D1);
 
   //initialize the pinMode for the team color light 
   pinMode(D2, OUTPUT); 
+
+  //intialize the pinMode for sending health to Teensy to display 
+  pinMode(D5, OUTPUT); 
 }
 
 //runs over and over 
@@ -132,51 +143,103 @@ void loop() {
 
   //only go if the health is greater than zero. 
   if (health > 0){
+    //set the max ADC value from the controller 
+    int maxADCValue = 675;
+      
     //create a multiplier since our pots on the controller only go from 0 to 400. 
     //since we want the full resolution of 0 to 1000, we multiply all the ADC values by 2.3
     //before actuating. 
-    double multiplier = 2.3; 
+    double multiplier = 1023/(maxADCValue/2); 
     
     //send the sinals to the motor if and only if  both motors have ADCs from controller
     if (motor1ADC > 0 && motor2ADC > 0){
       //first motor 
-      int toWriteFirst = (int) motor1ADC*multiplier; 
+      int toWriteFirst = 0; 
+      //figure out direction of motor 
+      if (motor1ADC > (int) maxADCValue/2){
+        //motor direction low 
+        digitalWrite(D0, LOW); 
+        //the value of toWriteFirst = the ADC from the controller - 1/2 the max 
+        toWriteFirst = motor1ADC - maxADCValue/2; 
+      } else{
+        //switch the motor direction to go other way 
+        digitalWrite(D0, HIGH); 
+        toWriteFirst = motor1ADC; 
+      }
+      //set the value = to 1/2 of the controller value * the multiplier 
+      toWriteFirst = (int) toWriteFirst*multiplier; 
       //write the scaled adc value to the first motor. 
       analogWrite(D3,toWriteFirst);
       //print to test. 
       Serial.print("first: ");
       Serial.println(toWriteFirst);
+
       
       //second motor 
-      int toWriteSecond = (int) motor2ADC*multiplier; 
+      int toWriteSecond = 0; 
+      //figure out direction of motor 
+      if (motor2ADC > (int) maxADCValue/2){
+        //motor direction stays low
+        digitalWrite(D7, LOW); 
+        //the value of toWriteFirst = the ADC from the controller - 1/2 the max 
+        toWriteSecond = motor2ADC - maxADCValue/2; 
+      } else{
+        //switch the motor direction to go other way 
+        digitalWrite(D7, HIGH); 
+        toWriteSecond = motor2ADC; 
+      }
+      //set the value = to 1/2 of the controller value * the multiplier 
+      toWriteSecond = (int) toWriteSecond*multiplier; 
       //write the scaled adc value to the second motor. 
       analogWrite(D4,toWriteSecond);
       //print to test. 
       Serial.print("second: ");
-      Serial.println(toWriteSecond); 
+      Serial.println(toWriteSecond);
     }
 
     //display the light of the team color
     //may have to switch high and low depending on which color gets inverter 
     if (teamColor == 'r'){
-      digitalWrite(D5, LOW); 
+      digitalWrite(D2, LOW); 
     } else if (teamColor == 'b'){
-      digitalWrite(D5, HIGH); 
+      digitalWrite(D2, HIGH); 
     }
 
     //do the meleeing and display that you are meleeing 
     if (melee){
-      //make the melee arm go 
-      digitalWrite(D1, LOW);
-    }
-    
+      endTime = millis();
+
+      //initially you can attack 
+      boolean coolDownPassed = true; 
+
+      //if the melee button hasn't been pressed yet (in which case you can attack) 
+      if (startTime != 0){
+        //check if time between startTime and endTime > coolingPeriod
+        coolDownPassed = ((endTime - startTime) >= coolingPeriod);
+      }
+
+      //if the cooldown period has passed 
+      if (coolDownPassed){
+        //reset the start time for the next iteration
+        startTime = millis(); 
+        
+        //define the maxAngle for the servo to go while actuating 
+        int maxAngle = 90; 
+        //make the melee arm go 
+        myservo.write(maxAngle);
+        //make the servo stay at max point for a bit
+        delay(100); 
+        //come back to initial point 
+        myservo.write(0); 
+      }
       
-    //display the health 
-
-    //display whether healing 
-
-    //
-    
+    }
+         
+    //send the health signal to the Teensy 
+    //convert the health to a 0 to 3.3V signal 
+    int maxHealth = 100; 
+    int healthToSendTeensy = (int) 1023 * (health / maxHealth); 
+    analogWrite(D5, healthToSendTeensy); 
   }
 }
 
@@ -192,9 +255,9 @@ String udpRead(){
     for (int i = 0; i < UPD_PACKET_SIZE; i++){
       packetFromOther += (char) udpBuffer[i];
     }
-    //Serial.print("Receiving! ");
-    //Serial.println(packetFromOther); 
-    //Serial.println(".");
+    Serial.print("Receiving! ");
+    Serial.println(packetFromOther); 
+    Serial.println(".");
   }
   return packetFromOther; 
 }
