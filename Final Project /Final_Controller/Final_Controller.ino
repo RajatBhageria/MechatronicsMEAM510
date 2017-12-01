@@ -60,7 +60,7 @@ void setup() {
   pinMode(D1, INPUT); 
 
   //set the pinMode for the melee
-  pinMode(D2, INPUT); 
+  pinMode(D6, INPUT); 
 }
 
 //note that we have two potentiometers that independently control the PWM of the two motors 
@@ -99,17 +99,18 @@ void loop() {
   //If red, switch is on 
   //If blue, switch is off 
   int teamColorValue = digitalRead(D1); 
-  if (teamColorValue == HIGH) {
+  if (teamColorValue == 1) {
     teamColor = 'b';
-  } else if (teamColor == LOW){ 
+  } else { 
     teamColor = 'r';
   }
 
   //get whether we want to melee or not 
-  int meleeValue = digitalRead(D2);
-  if (teamColorValue == HIGH) { // no melee
+  int meleeValue = digitalRead(D6);
+  Serial.print(meleeValue); 
+  if (meleeValue == HIGH) { // no melee
     melee = false;
-  } else if (teamColor == LOW){ //melee
+  } else { //melee
     melee = true;
   }
   
