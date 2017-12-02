@@ -13,7 +13,7 @@ const int UPD_PACKET_SIZE = 6;
 char udpBuffer[UPD_PACKET_SIZE]; 
 WiFiUDP udp;
 
-//construct a boolean that will switch every iteration of the loop
+//construct a boolean that will switch eZvery iteration of the loop
 //this determines whether we send power to pot 1 or pot 2 for each of the two motors 
 boolean firstMotor = false; 
 
@@ -57,10 +57,10 @@ void setup() {
   pinMode(D0, OUTPUT); 
 
   //set the pinMode for the team color 
-  pinMode(D1, INPUT); 
+  pinMode(D7, INPUT); 
 
   //set the pinMode for the melee
-  pinMode(D6, INPUT); 
+  pinMode(D8, INPUT); 
 }
 
 //note that we have two potentiometers that independently control the PWM of the two motors 
@@ -98,7 +98,7 @@ void loop() {
   //get whether the teamcolor is red or blue. 
   //If red, switch is on 
   //If blue, switch is off 
-  int teamColorValue = digitalRead(D1); 
+  int teamColorValue = digitalRead(D7); 
   if (teamColorValue == 1) {
     teamColor = 'b';
   } else { 
@@ -106,12 +106,11 @@ void loop() {
   }
 
   //get whether we want to melee or not 
-  int meleeValue = digitalRead(D6);
-  Serial.print(meleeValue); 
+  int meleeValue = digitalRead(D8);
   if (meleeValue == HIGH) { // no melee
-    melee = false;
-  } else { //melee
     melee = true;
+  } else { //melee
+    melee = false;
   }
   
   //actually send the information to the other ESP 
