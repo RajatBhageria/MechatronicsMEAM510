@@ -160,7 +160,7 @@ void loop() {
   //only go if the health is greater than zero. 
   if (health > 0){
     //set the max ADC value from the controller 
-    int maxADCValue = 675;
+    int maxADCValue = 418;
       
     //create a multiplier since our pots on the controller only go from 0 to 400. 
     //since we want the full resolution of 0 to 1000, we multiply all the ADC values by 2.3
