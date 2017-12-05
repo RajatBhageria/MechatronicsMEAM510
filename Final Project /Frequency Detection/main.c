@@ -61,16 +61,16 @@ int main(void){
     set(ADCSRA,ADPS1);
     set(ADCSRA,ADPS0);
 
-    // Disable digital inputs
-    set(DIDR2,ADC10D);
+    // Disable digital inputs for F0 for phototransistor 
+    set(DIDR0,ADC0D);
 
     // Set trigger to free running mode
     set(ADCSRA,ADATE);
 
-    // Set Phototransistor (D7 ADC10)
-    set(ADCSRB,MUX5);
+    // Set Phototransistor (F0 ADC0)
+    clear(ADCSRB,MUX5);
     clear(ADMUX,MUX2);
-    set(ADMUX,MUX1);
+    clear(ADMUX,MUX1);
     clear(ADMUX,MUX0);
  
     // Enable ADC subsystem

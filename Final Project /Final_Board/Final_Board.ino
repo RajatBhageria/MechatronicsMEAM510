@@ -3,14 +3,14 @@
 #include <Servo.h>
 
 //set up the wifi
-const char* ssid = "Mechatronics"; //Modlab1
-const char* pass = "YayFunFun"; // ESAP2017
+const char* ssid = "Mechatronics"; //"Modlab1";
+const char* pass = "YayFunFun"; //"ESAP2017";
 
 //set up local and remote ports and packet sizes 
 IPAddress ipSendto(192,168,1,63);
 unsigned int udpRemotePort = 2396; 
-unsigned int udplocalPort = 2397;
-const int UPD_PACKET_SIZE = 5; 
+unsigned int udplocalPort = 2397;//2397
+const int UPD_PACKET_SIZE = 6; 
 char udpBuffer[UPD_PACKET_SIZE]; 
 WiFiUDP udp;
 
@@ -63,25 +63,25 @@ void setup() {
 
   //Motor 1 
   //Set up the pinmode for motor left direction pin 
-  pinMode(D0, OUTPUT); 
+  pinMode(D1, OUTPUT); 
   //set up pinmode for speed of first  motor 
-  pinMode(D3, OUTPUT); 
+  pinMode(D2, OUTPUT); 
   //set the direction of the first motor 
-  digitalWrite(D0, LOW); 
+  digitalWrite(D1, LOW); 
 
   //Motor 2
   //Set up the pinmode for motor  direction pin 
   pinMode(D7, OUTPUT); 
   //set up pinmode for speed of second  motor 
-  pinMode(D4, OUTPUT); 
+  pinMode(D8, OUTPUT); 
   //set the direction for the second motor 
   digitalWrite(D7, LOW); 
 
   //initialize the pinMode for the servo 
-  myservo.attach(D1);
+  myservo.attach(D0);
 
   //initialize the pinMode for the team color light 
-  pinMode(D2, OUTPUT); 
+  pinMode(D6, OUTPUT); 
 
   //intialize the pinMode for sending health to Teensy to display 
   pinMode(D5, OUTPUT); 
@@ -89,7 +89,6 @@ void setup() {
 
 //runs over and over 
 void loop() {
-  
   int ADC1; //set to ADC1 value from the UDP
   int ADC2; //set to ADC2 value from the UDP 
 
@@ -142,6 +141,7 @@ void loop() {
     
     //get the team color 
     teamColor = ADCReads[5];
+    Serial.println(teamColor);
   } 
   
   //it's the health signal 
@@ -152,20 +152,21 @@ void loop() {
     } else{
       healthForTeam = ADCReads.substring(12,23); 
     }
+    
     //get the health dependent on the vehicle number 
     health = healthForTeam.substring(3,5).toInt(); 
-    
+
   }
   
   //only go if the health is greater than zero. 
-  if (health > 0){
+  if (1){ //change to if Health > 0
     //set the max ADC value from the controller 
     int maxADCValue = 418;
       
     //create a multiplier since our pots on the controller only go from 0 to 400. 
     //since we want the full resolution of 0 to 1000, we multiply all the ADC values by 2.3
     //before actuating. 
-    double multiplier = 1023/(maxADCValue/2); 
+    double multiplier = 2*1023.0/(maxADCValue); 
     
     //send the sinals to the motor if and only if  both motors have ADCs from controller
     if (motor1ADC > 0 && motor2ADC > 0){
@@ -174,18 +175,18 @@ void loop() {
       //figure out direction of motor 
       if (motor1ADC > (int) maxADCValue/2){
         //motor direction low 
-        digitalWrite(D0, LOW); 
+        digitalWrite(D1, LOW); 
         //the value of toWriteFirst = the ADC from the controller - 1/2 the max 
         toWriteFirst = motor1ADC - maxADCValue/2; 
       } else{
         //switch the motor direction to go other way 
-        digitalWrite(D0, HIGH); 
+        digitalWrite(D1, HIGH); 
         toWriteFirst = motor1ADC; 
       }
       //set the value = to 1/2 of the controller value * the multiplier 
       toWriteFirst = (int) toWriteFirst*multiplier; 
       //write the scaled adc value to the first motor. 
-      analogWrite(D3,toWriteFirst);
+      analogWrite(D2,toWriteFirst);
       //print to test. 
       Serial.print("first: ");
       Serial.println(toWriteFirst);
@@ -206,7 +207,7 @@ void loop() {
       //set the value = to 1/2 of the controller value * the multiplier 
       toWriteSecond = (int) toWriteSecond*multiplier; 
       //write the scaled adc value to the second motor. 
-      analogWrite(D4,toWriteSecond);
+      analogWrite(D8,toWriteSecond);
       //print to test. 
       Serial.print("second: ");
       Serial.println(toWriteSecond);
@@ -215,9 +216,9 @@ void loop() {
     //display the light of the team color
     //may have to switch high and low depending on which color gets inverter 
     if (teamColor == 'r'){
-      digitalWrite(D2, LOW); 
+      digitalWrite(D6, LOW); 
     } else if (teamColor == 'b'){
-      digitalWrite(D2, HIGH); 
+      digitalWrite(D6, HIGH); 
     }
 
     //do the meleeing and display that you are meleeing 
@@ -239,15 +240,14 @@ void loop() {
         startTime = millis(); 
         
         //define the maxAngle for the servo to go while actuating 
-        int maxAngle = 90; 
+        int maxAngle = 120; 
         //make the melee arm go 
         myservo.write(maxAngle);
         //make the servo stay at max point for a bit
-        delay(100); 
+        delay(50); 
         //come back to initial point 
         myservo.write(0); 
       }
-      
     }
          
     //send the health signal to the Teensy 

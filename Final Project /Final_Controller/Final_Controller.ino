@@ -2,8 +2,8 @@
 #include <WiFiUdp.h>
 
 //set the ssid and pass of the wifi
-const char* ssid = "modlab1"; //Modlab1
-const char* pass = "ESAP2017"; // ESAP2017
+const char* ssid = "Mechatronics"; //"Modlab1";
+const char* pass = "YayFunFun"; //"ESAP2017";
 
 //for sending 
 IPAddress ipSendto(192,168,1,20);
