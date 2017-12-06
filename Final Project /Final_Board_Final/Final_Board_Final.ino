@@ -26,16 +26,20 @@ int motor2ADC;
 
 //initialize the melee values and team color values 
 boolean melee = false; 
+int meleeCounter = 0; 
+
 char teamColor = 'r';
 
 //initialize the health, cooling period
 int health = 100; 
-int attackDamage = 10; 
 
 //implement cooldown period
 int startTime = 0; 
 int endTime = 0; 
-int coolingPeriod = 10; 
+int coolingPeriod = 10000; 
+
+//initially you can attack 
+boolean coolDownPassed = true; 
 
 //initialize the servo for melee 
 Servo myservo;
@@ -147,10 +151,11 @@ void loop() {
   }
 
   //get whether melee is being implemented 
-  melee = false; 
   if (ADCReads[4] == 'm'){
     melee = true;
+    meleeCounter = meleeCounter + 1; 
   } else if (ADCReads[4] == 'n'){
+    meleeCounter = 0; 
     melee = false;
   }
   
@@ -159,24 +164,20 @@ void loop() {
   
   //get the health signal 
   String healthReads = udpReadHealth();
-  String healthForTeam = "";
-  if (teamColor == 'r'){
-    healthForTeam = healthReads.substring(0,11); 
-  } else{
-    healthForTeam = healthReads.substring(12,23); 
-  }
-  
-  //get the health dependent on the vehicle number 
-  health = healthForTeam.substring(3,5).toInt(); 
-  Serial.print(health);
-  //remove
-  if (health == 0){
-    health = 100;
+  if (healthReads.length() > 0){
+    String healthForTeam = "";
+    if (teamColor == 'r'){
+      healthForTeam = healthReads.substring(0,11); 
+    } else{
+      healthForTeam = healthReads.substring(12,23); 
+    }
+    //get the health dependent on the vehicle number 
+    health = healthForTeam.substring(3,5).toInt();
   }
   
   //make the robot go
   //only go if the health is greater than zero. 
-  if (health > 0){ 
+  if (health > -1){ 
     //set the max ADC value from the controller 
     int maxADCValue = 418;
       
@@ -238,45 +239,35 @@ void loop() {
     //display the light of the team color
     //may have to switch high and low depending on which color gets inverter 
     if (teamColor == 'r'){
-      digitalWrite(D6, LOW); 
+      digitalWrite(D5, LOW); 
     } else if (teamColor == 'b'){
-      digitalWrite(D6, HIGH); 
+      digitalWrite(D5, HIGH); 
     }
-
-    //do the meleeing and display that you are meleeing 
+    //do the meleeing and display that you are meleeing
     if (melee){
-      endTime = millis();
-      startTime = 0; 
-
-      //initially you can attack 
-      boolean coolDownPassed = true; 
-
-      //if the melee button hasn't been pressed yet (in which case you can attack) 
-      if (startTime != 0){
-        //check if time between startTime and endTime > coolingPeriod
-        coolDownPassed = ((endTime - startTime) >= coolingPeriod);
-      }
-
+      //check if time between startTime and endTime > coolingPeriod
+      coolDownPassed = ((millis() - startTime) >= coolingPeriod);
       //if the cooldown period has passed 
-      if (coolDownPassed){
+      if (coolDownPassed && meleeCounter < 2){
         //reset the start time for the next iteration
         startTime = millis(); 
         //make the melee arm go 
         myservo.write(180);
         //make the servo stay at max point for a bit
-        delay(1000); 
+        delay(500); 
         //come back to initial point 
         myservo.write(130); 
         //make the servo stay at max point for a bit
-        delay(1000); 
+        delay(500); 
+        melee = false; 
       }
     }
          
     //send the health signal to the Teensy 
     //convert the health to a 0 to 3.3V signal 
-    int maxHealth = 100; 
-    int healthToSendTeensy = (int) 1023 * (health / maxHealth); 
-    analogWrite(D5, healthToSendTeensy); 
+    double maxHealth = 100.0; 
+    int healthToSendTeensy = (int) 1023.0 * (health / maxHealth);
+    analogWrite(D6, healthToSendTeensy); 
   }
 }
 
