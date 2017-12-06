@@ -9,10 +9,16 @@ const char* pass = "YayFunFun"; //"ESAP2017";
 //set up local and remote ports and packet sizes 
 IPAddress ipSendto(192,168,1,63);
 unsigned int udpRemotePort = 2396; 
-unsigned int udplocalPort = 2397;//2397
+unsigned int udplocalPort = 2397;
 const int UPD_PACKET_SIZE = 6; 
 char udpBuffer[UPD_PACKET_SIZE]; 
 WiFiUDP udp;
+
+//initialize the wifi for the health signals 
+WiFiUDP udpHealth; 
+unsigned int udpHealthRemotePort = 2390;
+const int UPD_PACKET_SIZE_HEALTH = 23; 
+byte udpBufferHealth[UPD_PACKET_SIZE_HEALTH]; 
 
 //initialize values of the motors 
 int motor1ADC; 
@@ -61,6 +67,12 @@ void setup() {
   Serial.print("Local Port:");
   Serial.println(udp.localPort());
 
+  //start the UDP connection for the health 
+  Serial.println("Starting UDP Health");
+  udpHealth.begin(2390); 
+  Serial.print("Local Port Health:");
+  Serial.println(udpHealth.localPort());
+
   //Motor 1 
   //Set up the pinmode for motor left direction pin 
   pinMode(D1, OUTPUT); 
@@ -95,75 +107,76 @@ void loop() {
   //get the ADC values from the controller 
   String ADCReads = udpRead(); 
 
-  //determine if the signal is from controller or it's health 
-  if (ADCReads.length() == 6){
-    //find the length of the String ADCReads. 
-    //Note that this is because ADC values can range from 0 to 4 digits. In our code, 
-    //an A shows that the ADC value is less than 4 digits 
-    int indexA = ADCReads.indexOf('A');
-  
-    //instantiate variables that we'll parse from the ADC reads
-    //this is an ADC value from ADCReads
-    int ADCvalue;
-    //motorValue tells us 'x' for the first motor and 'y' for the second motor. 
-    char motorValue; 
-  
-    //get the ADC values and which motor it corresponds 
-    //in the case that the ADC value is four chars, there will be no 'A' in our ADCReads string 
-    if (indexA == -1){
-      //We then take the substring and convert it to an int. 
-      ADCvalue = ADCReads.substring(0,3).toInt();
-      
-      //the motorValue ('x' or 'y' is always the fourth char in ADCReads from the controller. 
-      motorValue = (char) ADCReads[3];
-      
-    } else{
-      //in the case that the ADC value is less than four chars, there will be an 'A' in the ADCReads
-      //And so we find the substring of the string to find the ADC value and convert it to an int. 
-      ADCvalue = ADCReads.substring(0,indexA).toInt();
-      
-      //the motorValue ('x' or 'y' is always the fourth char in ADCReads from the controller. 
-      motorValue = (char) ADCReads[3];
-    }
-  
-    //get the values for first and second motor 
-    if (motorValue == 'x') {//first motor
-      //set the motor1ADC value to actuate as the ADCValue parsed from ADCReads. 
-      motor1ADC = ADCvalue; 
-      
-    } else if (motorValue = 'y'){//second motor 
-      //set the motor2ADC value to actuate as the ADCValue parsed from ADCReads. 
-      motor2ADC = ADCvalue; 
-    }
-  
-    //get whether melee is being implemented 
-    melee = false; 
-    if (ADCReads[4] == 'm'){
-      melee = true;
-    } else if (ADCReads[4] == 'n'){
-      melee = false;
-    }
-    
-    //get the team color 
-    teamColor = ADCReads[5];
-  } 
-  
-  //it's the health signal 
-  else{
-    String healthForTeam = "";
-    if (teamColor == 'r'){
-      healthForTeam = ADCReads.substring(0,11); 
-    } else{
-      healthForTeam = ADCReads.substring(12,23); 
-    }
-    
-    //get the health dependent on the vehicle number 
-    health = healthForTeam.substring(3,5).toInt(); 
+  //find the length of the String ADCReads. 
+  //Note that this is because ADC values can range from 0 to 4 digits. In our code, 
+  //an A shows that the ADC value is less than 4 digits 
+  int indexA = ADCReads.indexOf('A');
 
+  //instantiate variables that we'll parse from the ADC reads
+  //this is an ADC value from ADCReads
+  int ADCvalue;
+  //motorValue tells us 'x' for the first motor and 'y' for the second motor. 
+  char motorValue; 
+
+  //get the ADC values and which motor it corresponds 
+  //in the case that the ADC value is four chars, there will be no 'A' in our ADCReads string 
+  if (indexA == -1){
+    //We then take the substring and convert it to an int. 
+    ADCvalue = ADCReads.substring(0,3).toInt();
+    
+    //the motorValue ('x' or 'y' is always the fourth char in ADCReads from the controller. 
+    motorValue = (char) ADCReads[3];
+    
+  } else{
+    //in the case that the ADC value is less than four chars, there will be an 'A' in the ADCReads
+    //And so we find the substring of the string to find the ADC value and convert it to an int. 
+    ADCvalue = ADCReads.substring(0,indexA).toInt();
+    
+    //the motorValue ('x' or 'y' is always the fourth char in ADCReads from the controller. 
+    motorValue = (char) ADCReads[3];
+  }
+
+  //get the values for first and second motor 
+  if (motorValue == 'x') {//first motor
+    //set the motor1ADC value to actuate as the ADCValue parsed from ADCReads. 
+    motor1ADC = ADCvalue; 
+    
+  } else if (motorValue = 'y'){//second motor 
+    //set the motor2ADC value to actuate as the ADCValue parsed from ADCReads. 
+    motor2ADC = ADCvalue; 
+  }
+
+  //get whether melee is being implemented 
+  melee = false; 
+  if (ADCReads[4] == 'm'){
+    melee = true;
+  } else if (ADCReads[4] == 'n'){
+    melee = false;
   }
   
+  //get the team color 
+  teamColor = ADCReads[5];
+  
+  //get the health signal 
+  String healthReads = udpReadHealth();
+  String healthForTeam = "";
+  if (teamColor == 'r'){
+    healthForTeam = healthReads.substring(0,11); 
+  } else{
+    healthForTeam = healthReads.substring(12,23); 
+  }
+  
+  //get the health dependent on the vehicle number 
+  health = healthForTeam.substring(3,5).toInt(); 
+  Serial.print(health);
+  //remove
+  if (health == 0){
+    health = 100;
+  }
+  
+  //make the robot go
   //only go if the health is greater than zero. 
-  if (1){ //change to if Health > 0
+  if (health > 0){ 
     //set the max ADC value from the controller 
     int maxADCValue = 418;
       
@@ -182,12 +195,12 @@ void loop() {
       //figure out direction of motor 
       if (motor1ADC > (int) maxADCValue/2){
         //motor direction low 
-        digitalWrite(D1, HIGH); 
+        digitalWrite(D1, LOW); 
         //the value of toWriteFirst = the ADC from the controller - 1/2 the max 
         toWriteFirst = motor1ADC - maxADCValue/2; 
       } else{
         //switch the motor direction to go other way 
-        digitalWrite(D1, LOW); 
+        digitalWrite(D1, HIGH); 
         toWriteFirst = abs(motor1ADC-maxADCValue/2);
       }
       //create the ranges of zero. 
@@ -204,13 +217,13 @@ void loop() {
       //figure out direction of motor 
       if (motor2ADC > (int) maxADCValue/2){
         //motor direction stays low
-        digitalWrite(D7, HIGH);   
+        digitalWrite(D7, LOW);   
         //the value of toWriteFirst = the ADC from the controller - 1/2 the max 
         toWriteSecond = motor2ADC - maxADCValue/2; 
         //create the ranges of zero. 
       } else{
         //switch the motor direction to go other way 
-        digitalWrite(D7, LOW); 
+        digitalWrite(D7, HIGH); 
         toWriteSecond = abs(motor2ADC-maxADCValue/2);
       }
       if (toWriteSecond < range){
@@ -233,6 +246,7 @@ void loop() {
     //do the meleeing and display that you are meleeing 
     if (melee){
       endTime = millis();
+      startTime = 0; 
 
       //initially you can attack 
       boolean coolDownPassed = true; 
@@ -285,3 +299,18 @@ String udpRead(){
   return packetFromOther; 
 }
 
+
+String udpReadHealth(){
+  String health = "";
+  int c = udpHealth.parsePacket(); 
+  if (c){
+    udpHealth.read(udpBufferHealth, UPD_PACKET_SIZE_HEALTH);
+    for (int i = 0; i < UPD_PACKET_SIZE_HEALTH; i++){
+      health += (char) udpBufferHealth[i];
+    }
+    Serial.print("Receiving Health! ");
+    Serial.println(health); 
+    Serial.println(".");
+  }
+  return health; 
+}
